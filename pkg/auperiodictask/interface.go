@@ -3,28 +3,20 @@ package periodictask
 import (
 	"time"
 
+	"github.com/Roshick/go-autumn-synchronisation/pkg/locker"
 	"golang.org/x/net/context"
 )
 
 type Coordinator interface {
-	ObtainLock(
-		ctx context.Context,
-		key string,
-	) (Lock, error)
+	locker.Locker
 
-	LastRunDate(
+	LastRunTimestamp(
 		ctx context.Context,
 		key string,
 	) (*time.Time, error)
 
-	UpdateLastRunDate(
+	UpdateLastTimestamp(
 		ctx context.Context,
 		key string,
-	) error
-}
-
-type Lock interface {
-	Release(
-		ctx context.Context,
 	) error
 }

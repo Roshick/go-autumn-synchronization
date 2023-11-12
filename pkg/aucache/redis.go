@@ -10,36 +10,36 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type redisCache[E any] struct {
+type redisCache[Entity any] struct {
 	rdb *redis.Client
 	key string
 }
 
-func NewRedisCache[E any](
+func NewRedisCache[Entity any](
 	redisURL string,
 	redisPassword string,
 	key string,
-) Cache[E] {
+) Cache[Entity] {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     redisURL,
 		Password: redisPassword,
 		DB:       0,
 	})
 
-	return &redisCache[E]{
+	return &redisCache[Entity]{
 		rdb: rdb,
 		key: key,
 	}
 }
 
-func (c *redisCache[E]) Entries(
+func (c *redisCache[Entity]) Entries(
 	ctx context.Context,
-) (map[string]E, error) {
+) (map[string]Entity, error) {
 	keys, err := c.Keys(ctx)
 	if err != nil {
 		return nil, err
 	}
-	entries := make(map[string]E)
+	entries := make(map[string]Entity)
 	for _, key := range keys {
 		value, err := c.Get(ctx, key)
 		if err != nil {
@@ -52,7 +52,7 @@ func (c *redisCache[E]) Entries(
 	return entries, nil
 }
 
-func (c *redisCache[E]) Keys(
+func (c *redisCache[Entity]) Keys(
 	ctx context.Context,
 ) ([]string, error) {
 	keysWithPrefix, err := c.rdb.Keys(ctx, c.entryKeyPattern()).Result()
@@ -69,24 +69,24 @@ func (c *redisCache[E]) Keys(
 	return keys, nil
 }
 
-func (c *redisCache[E]) Values(
+func (c *redisCache[Entity]) Values(
 	ctx context.Context,
-) ([]E, error) {
+) ([]Entity, error) {
 	entries, err := c.Entries(ctx)
 	if err != nil {
 		return nil, err
 	}
-	values := make([]E, 0)
+	values := make([]Entity, 0)
 	for _, value := range entries {
 		values = append(values, value)
 	}
 	return values, nil
 }
 
-func (c *redisCache[E]) Set(
+func (c *redisCache[Entity]) Set(
 	ctx context.Context,
 	key string,
-	value E,
+	value Entity,
 	retention time.Duration,
 ) error {
 	jsonBytes, err := json.Marshal(value)
@@ -97,10 +97,10 @@ func (c *redisCache[E]) Set(
 	return c.rdb.Set(ctx, c.entryKey(key), string(jsonBytes), retention).Err()
 }
 
-func (c *redisCache[E]) Get(
+func (c *redisCache[Entity]) Get(
 	ctx context.Context,
 	key string,
-) (*E, error) {
+) (*Entity, error) {
 	jsonString, err := c.rdb.Get(ctx, c.entryKey(key)).Result()
 	if err == redis.Nil {
 		return nil, nil
@@ -108,35 +108,35 @@ func (c *redisCache[E]) Get(
 		return nil, err
 	}
 
-	var value E
+	var value Entity
 	if err = json.Unmarshal([]byte(jsonString), &value); err != nil {
 		return nil, err
 	}
 	return &value, nil
 }
 
-func (c *redisCache[E]) Remove(
+func (c *redisCache[Entity]) Remove(
 	ctx context.Context,
 	key string,
 ) error {
 	return c.rdb.Del(ctx, key).Err()
 }
 
-func (c *redisCache[E]) RemainingRetention(
+func (c *redisCache[Entity]) RemainingRetention(
 	ctx context.Context,
 	key string,
 ) (time.Duration, error) {
 	return c.rdb.TTL(ctx, key).Result()
 }
 
-func (c *redisCache[E]) entryKeyPrefix() string {
+func (c *redisCache[Entity]) entryKeyPrefix() string {
 	return fmt.Sprintf("%s|", c.key)
 }
 
-func (c *redisCache[E]) entryKeyPattern() string {
+func (c *redisCache[Entity]) entryKeyPattern() string {
 	return fmt.Sprintf("%s*", c.entryKeyPrefix())
 }
 
-func (c *redisCache[E]) entryKey(key string) string {
+func (c *redisCache[Entity]) entryKey(key string) string {
 	return fmt.Sprintf("%s%s", c.entryKeyPrefix(), key)
 }
