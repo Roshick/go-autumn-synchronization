@@ -6,7 +6,6 @@ import (
 	"time"
 
 	aulogging "github.com/StephanHCB/go-autumn-logging"
-	"github.com/StephanHCB/go-backend-service-common/web/util/contexthelper"
 	"golang.org/x/net/context"
 )
 
@@ -24,6 +23,7 @@ type Config struct {
 }
 
 func NewSingleTaskRunner(
+	ctx context.Context,
 	taskKey string,
 	taskFunc func(context.Context) error,
 	coordinator Coordinator,
@@ -43,8 +43,7 @@ func NewSingleTaskRunner(
 		config:      vConfig,
 	}
 
-	asyncCtx, asyncCtxCancel := contexthelper.StandaloneContext(taskKey, "backgroundJob")
-	go runner.start(asyncCtx, asyncCtxCancel)
+	go runner.start(ctx)
 	return runner
 }
 
@@ -56,19 +55,17 @@ func CreateDefaultConfig() Config {
 	}
 }
 
-func (r *PeriodicSingleTaskRunner) start(
-	ctx context.Context,
-	cancel context.CancelFunc,
-) {
+func (r *PeriodicSingleTaskRunner) start(ctx context.Context) {
 	defer func() {
 		if err, ok := recover().(error); ok {
 			aulogging.Logger.Ctx(ctx).Error().WithErr(err).Printf("periodic-task runner %s exited due to panic: %+v", r.taskKey, errors.New(fmt.Sprintf("%v", err)))
 		}
-		cancel()
 	}()
 	r.performTask(ctx)
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case <-time.After(r.config.runnerFrequency):
 			r.performTask(ctx)
 		}
@@ -79,7 +76,7 @@ func (r *PeriodicSingleTaskRunner) performTask(
 	ctx context.Context,
 ) {
 	callback := func() error {
-		rTime, err := r.coordinator.LastRunDate(ctx, r.taskKey)
+		rTime, err := r.coordinator.LastRunTimestamp(ctx, r.taskKey)
 		if err != nil {
 			return err
 		}
@@ -92,7 +89,7 @@ func (r *PeriodicSingleTaskRunner) performTask(
 			return err
 		}
 
-		if err = r.coordinator.UpdateLastRunDate(ctx, r.taskKey); err != nil {
+		if err = r.coordinator.UpdateLastTimestamp(ctx, r.taskKey); err != nil {
 			return err
 		}
 		return nil

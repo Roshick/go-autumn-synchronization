@@ -8,16 +8,14 @@ import (
 	"errors"
 	"fmt"
 
-	"bitbucket.interhyp.de/bitbucket/projects/INTEGRATION/repos/deployment-orchestrator/pkg/cache"
-	"bitbucket.interhyp.de/bitbucket/projects/INTEGRATION/repos/deployment-orchestrator/pkg/locker"
+	"github.com/Roshick/go-autumn-synchronisation/pkg/cache"
+	"github.com/Roshick/go-autumn-synchronisation/pkg/locker"
 	aulogging "github.com/StephanHCB/go-autumn-logging"
-	librepo "github.com/StephanHCB/go-backend-service-common/acorns/repository"
 	"golang.org/x/net/context"
 )
 
 type CachedRepository[BaseEntity any, ProcessedEntity any, ChangeContext any] struct {
 	key        string
-	timestamp  librepo.Timestamp
 	repository Repository[BaseEntity, ChangeContext]
 	cache      cache.Cache[ProcessedEntity]
 	processor  Processor[BaseEntity, ProcessedEntity]
@@ -27,7 +25,6 @@ type CachedRepository[BaseEntity any, ProcessedEntity any, ChangeContext any] st
 
 func NewCachedRepository[BaseEntity any, ProcessedEntity any, ChangeContext any](
 	key string,
-	timestamp librepo.Timestamp,
 	repository Repository[BaseEntity, ChangeContext],
 	cache cache.Cache[ProcessedEntity],
 	processor Processor[BaseEntity, ProcessedEntity],
@@ -36,7 +33,6 @@ func NewCachedRepository[BaseEntity any, ProcessedEntity any, ChangeContext any]
 ) *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext] {
 	return &CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]{
 		key:        key,
-		timestamp:  timestamp,
 		cache:      cache,
 		repository: repository,
 		processor:  processor,

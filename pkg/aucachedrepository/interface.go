@@ -4,34 +4,34 @@ import (
 	"golang.org/x/net/context"
 )
 
-type Repository[E any, C any] interface {
+type Repository[Entity any, ChangeContext any] interface {
 	Create(
 		ctx context.Context,
 		name string,
-		entity E,
-		changeContext *C,
+		entity Entity,
+		changeContext *ChangeContext,
 	) error
 
 	ReadAll(
 		ctx context.Context,
-	) (map[string]E, error)
+	) (map[string]Entity, error)
 
 	Read(
 		ctx context.Context,
 		name string,
-	) (E, error)
+	) (Entity, error)
 
 	Update(
 		ctx context.Context,
 		name string,
-		entity E,
-		changeContext *C,
+		entity Entity,
+		changeContext *ChangeContext,
 	) error
 
 	Delete(
 		ctx context.Context,
 		name string,
-		changeContext *C,
+		changeContext *ChangeContext,
 	) error
 }
 
@@ -42,17 +42,17 @@ const (
 	CacheActionCauseReconciliation
 )
 
-type Hooks[E any] interface {
+type Hooks[Entity any] interface {
 	OnRepositoryEntityCreated(
 		ctx context.Context,
 		name string,
-		entity E,
+		entity Entity,
 	) error
 
 	OnRepositoryEntityUpdated(
 		ctx context.Context,
 		name string,
-		entity E,
+		entity Entity,
 	) error
 
 	OnRepositoryEntityDeleted(
@@ -63,14 +63,14 @@ type Hooks[E any] interface {
 	OnCacheEntityAdded(
 		ctx context.Context,
 		name string,
-		entity E,
+		entity Entity,
 		cause CacheActionCause,
 	) error
 
 	OnCacheEntityUpdated(
 		ctx context.Context,
 		name string,
-		entity E,
+		entity Entity,
 		cause CacheActionCause,
 	) error
 
@@ -81,16 +81,16 @@ type Hooks[E any] interface {
 	) error
 }
 
-type Processor[B any, P any] interface {
+type Processor[BaseEntity any, ProcessedEntity any] interface {
 	ProcessEntity(
 		ctx context.Context,
-		entity B,
-	) (P, error)
+		entity BaseEntity,
+	) (ProcessedEntity, error)
 
 	InverseProcessEntity(
 		ctx context.Context,
-		entity P,
-	) (B, error)
+		entity ProcessedEntity,
+	) (BaseEntity, error)
 }
 
 // ToDo: Use later for custom hash

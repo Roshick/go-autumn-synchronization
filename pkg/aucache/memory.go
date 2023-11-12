@@ -7,26 +7,26 @@ import (
 	"time"
 )
 
-type memoryCache[E any] struct {
+type memoryCache[Entity any] struct {
 	store sync.Map
 }
 
-func NewMemoryCache[E any]() Cache[E] {
-	return &memoryCache[E]{store: sync.Map{}}
+func NewMemoryCache[Entity any]() Cache[Entity] {
+	return &memoryCache[Entity]{store: sync.Map{}}
 }
 
-func (c *memoryCache[E]) Entries(
+func (c *memoryCache[Entity]) Entries(
 	_ context.Context,
-) (map[string]E, error) {
-	entries := make(map[string]E)
+) (map[string]Entity, error) {
+	entries := make(map[string]Entity)
 	c.store.Range(func(key, value any) bool {
-		entries[key.(string)] = value.(E)
+		entries[key.(string)] = value.(Entity)
 		return true
 	})
 	return entries, nil
 }
 
-func (c *memoryCache[E]) Keys(
+func (c *memoryCache[Entity]) Keys(
 	_ context.Context,
 ) ([]string, error) {
 	keys := make([]string, 0)
@@ -37,40 +37,40 @@ func (c *memoryCache[E]) Keys(
 	return keys, nil
 }
 
-func (c *memoryCache[E]) Values(
+func (c *memoryCache[Entity]) Values(
 	_ context.Context,
-) ([]E, error) {
-	values := make([]E, 0)
+) ([]Entity, error) {
+	values := make([]Entity, 0)
 	c.store.Range(func(key, value any) bool {
-		values = append(values, value.(E))
+		values = append(values, value.(Entity))
 		return true
 	})
 	return values, nil
 }
 
-func (c *memoryCache[E]) Set(
+func (c *memoryCache[Entity]) Set(
 	_ context.Context,
 	key string,
-	value E,
+	value Entity,
 	_ time.Duration,
 ) error {
 	c.store.Store(key, value)
 	return nil
 }
 
-func (c *memoryCache[E]) Get(
+func (c *memoryCache[Entity]) Get(
 	_ context.Context,
 	key string,
-) (*E, error) {
+) (*Entity, error) {
 	value, ok := c.store.Load(key)
 	if !ok {
 		return nil, nil
 	}
-	castValue := value.(E)
+	castValue := value.(Entity)
 	return &castValue, nil
 }
 
-func (c *memoryCache[E]) Remove(
+func (c *memoryCache[Entity]) Remove(
 	_ context.Context,
 	key string,
 ) error {
@@ -78,7 +78,7 @@ func (c *memoryCache[E]) Remove(
 	return nil
 }
 
-func (c *memoryCache[E]) RemainingRetention(
+func (c *memoryCache[Entity]) RemainingRetention(
 	_ context.Context,
 	key string,
 ) (time.Duration, error) {

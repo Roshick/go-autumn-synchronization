@@ -6,10 +6,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-type Cache[E any] interface {
+type Cache[Entity any] interface {
 	Entries(
 		ctx context.Context,
-	) (map[string]E, error)
+	) (map[string]Entity, error)
 
 	Keys(
 		ctx context.Context,
@@ -17,19 +17,19 @@ type Cache[E any] interface {
 
 	Values(
 		ctx context.Context,
-	) ([]E, error)
+	) ([]Entity, error)
 
 	Set(
 		ctx context.Context,
 		key string,
-		value E,
+		value Entity,
 		retention time.Duration,
 	) error
 
 	Get(
 		ctx context.Context,
 		key string,
-	) (*E, error)
+	) (*Entity, error)
 
 	Remove(
 		ctx context.Context,
