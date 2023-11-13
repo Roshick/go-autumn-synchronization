@@ -1,4 +1,4 @@
-package cachedrepository
+package aucachedrepository
 
 import (
 	"bytes"
@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Roshick/go-autumn-synchronisation/pkg/cache"
-	"github.com/Roshick/go-autumn-synchronisation/pkg/locker"
+	"github.com/Roshick/go-autumn-synchronisation/pkg/aucache"
+	"github.com/Roshick/go-autumn-synchronisation/pkg/aulocker"
 	aulogging "github.com/StephanHCB/go-autumn-logging"
 	"golang.org/x/net/context"
 )
@@ -17,18 +17,18 @@ import (
 type CachedRepository[BaseEntity any, ProcessedEntity any, ChangeContext any] struct {
 	key        string
 	repository Repository[BaseEntity, ChangeContext]
-	cache      cache.Cache[ProcessedEntity]
+	cache      aucache.Cache[ProcessedEntity]
 	processor  Processor[BaseEntity, ProcessedEntity]
-	locker     locker.Locker
+	locker     aulocker.Locker
 	hooks      Hooks[ProcessedEntity]
 }
 
 func NewCachedRepository[BaseEntity any, ProcessedEntity any, ChangeContext any](
 	key string,
 	repository Repository[BaseEntity, ChangeContext],
-	cache cache.Cache[ProcessedEntity],
+	cache aucache.Cache[ProcessedEntity],
 	processor Processor[BaseEntity, ProcessedEntity],
-	locker locker.Locker,
+	locker aulocker.Locker,
 	hooks Hooks[ProcessedEntity],
 ) *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext] {
 	return &CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]{
@@ -319,7 +319,7 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) synchroni
 	if err != nil {
 		return err
 	}
-	defer func(lock locker.Lock, ctx context.Context) {
+	defer func(lock aulocker.Lock, ctx context.Context) {
 		err := lock.Release(ctx)
 		if err != nil {
 			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).Printf("failed to unlock %s", c.lockerKey())

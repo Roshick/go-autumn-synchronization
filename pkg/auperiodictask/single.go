@@ -1,10 +1,11 @@
-package periodictask
+package auperiodictask
 
 import (
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/Roshick/go-autumn-synchronisation/pkg/aulocker"
 	aulogging "github.com/StephanHCB/go-autumn-logging"
 	"golang.org/x/net/context"
 )
@@ -104,7 +105,7 @@ func (r *PeriodicSingleTaskRunner) performTask(
 		aulogging.Logger.Ctx(ctx).Warn().Print("failed to obtain lock for periodic-task %s in time", r.taskKey)
 		return
 	}
-	defer func(lock Lock, ctx context.Context) {
+	defer func(lock aulocker.Lock, ctx context.Context) {
 		err := lock.Release(ctx)
 		if err != nil {
 			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).Printf("failed to release lock for periodic-task %s", r.taskKey)

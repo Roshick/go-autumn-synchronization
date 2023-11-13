@@ -1,4 +1,4 @@
-package locker
+package aulocker
 
 import (
 	"sync"
