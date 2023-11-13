@@ -15,7 +15,7 @@ type Coordinator interface {
 		key string,
 	) (*time.Time, error)
 
-	UpdateLastTimestamp(
+	UpdateLastRunTimestamp(
 		ctx context.Context,
 		key string,
 	) error
