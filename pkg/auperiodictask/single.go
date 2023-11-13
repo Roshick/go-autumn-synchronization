@@ -90,7 +90,7 @@ func (r *PeriodicSingleTaskRunner) performTask(
 			return err
 		}
 
-		if err = r.coordinator.UpdateLastTimestamp(ctx, r.taskKey); err != nil {
+		if err = r.coordinator.UpdateLastRunTimestamp(ctx, r.taskKey); err != nil {
 			return err
 		}
 		return nil
