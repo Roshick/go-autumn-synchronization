@@ -2,6 +2,7 @@ package aucache
 
 import (
 	"context"
+	"encoding/json"
 	"math"
 	"sync"
 	"time"
@@ -19,11 +20,17 @@ func (c *memoryCache[Entity]) Entries(
 	_ context.Context,
 ) (map[string]Entity, error) {
 	entries := make(map[string]Entity)
+	var firstError error
 	c.store.Range(func(key, value any) bool {
-		entries[key.(string)] = value.(Entity)
+		vPtr, err := unmarshal[Entity](value.(string))
+		if err != nil {
+			firstError = err
+			return false
+		}
+		entries[key.(string)] = *vPtr
 		return true
 	})
-	return entries, nil
+	return entries, firstError
 }
 
 func (c *memoryCache[Entity]) Keys(
@@ -41,11 +48,17 @@ func (c *memoryCache[Entity]) Values(
 	_ context.Context,
 ) ([]Entity, error) {
 	values := make([]Entity, 0)
+	var firstError error
 	c.store.Range(func(key, value any) bool {
-		values = append(values, value.(Entity))
+		vPtr, err := unmarshal[Entity](value.(string))
+		if err != nil {
+			firstError = err
+			return false
+		}
+		values = append(values, *vPtr)
 		return true
 	})
-	return values, nil
+	return values, firstError
 }
 
 func (c *memoryCache[Entity]) Set(
@@ -54,7 +67,11 @@ func (c *memoryCache[Entity]) Set(
 	value Entity,
 	_ time.Duration,
 ) error {
-	c.store.Store(key, value)
+	jsonBytes, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	c.store.Store(key, string(jsonBytes))
 	return nil
 }
 
@@ -62,12 +79,11 @@ func (c *memoryCache[Entity]) Get(
 	_ context.Context,
 	key string,
 ) (*Entity, error) {
-	value, ok := c.store.Load(key)
+	jsonString, ok := c.store.Load(key)
 	if !ok {
 		return nil, nil
 	}
-	castValue := value.(Entity)
-	return &castValue, nil
+	return unmarshal[Entity](jsonString.(string))
 }
 
 func (c *memoryCache[Entity]) Remove(
@@ -87,4 +103,12 @@ func (c *memoryCache[Entity]) RemainingRetention(
 		return 0, nil
 	}
 	return math.MaxInt64, nil
+}
+
+func unmarshal[Entity any](jsonString string) (*Entity, error) {
+	var value Entity
+	if err := json.Unmarshal([]byte(jsonString), &value); err != nil {
+		return nil, err
+	}
+	return &value, nil
 }
