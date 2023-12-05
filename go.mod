@@ -1,6 +1,6 @@
 module github.com/Roshick/go-autumn-synchronisation
 
-go 1.21.4
+go 1.21.5
 
 require (
 	github.com/StephanHCB/go-autumn-logging v0.3.0
