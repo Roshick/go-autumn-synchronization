@@ -3,6 +3,7 @@ package aucache
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -102,7 +103,7 @@ func (c *redisCache[Entity]) Get(
 	key string,
 ) (*Entity, error) {
 	jsonString, err := c.rdb.Get(ctx, c.entryKey(key)).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -119,14 +120,14 @@ func (c *redisCache[Entity]) Remove(
 	ctx context.Context,
 	key string,
 ) error {
-	return c.rdb.Del(ctx, key).Err()
+	return c.rdb.Del(ctx, c.entryKey(key)).Err()
 }
 
 func (c *redisCache[Entity]) RemainingRetention(
 	ctx context.Context,
 	key string,
 ) (time.Duration, error) {
-	return c.rdb.TTL(ctx, key).Result()
+	return c.rdb.TTL(ctx, c.entryKey(key)).Result()
 }
 
 func (c *redisCache[Entity]) entryKeyPrefix() string {
