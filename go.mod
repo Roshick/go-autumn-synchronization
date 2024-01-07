@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/StephanHCB/go-autumn-logging v0.3.0
 	github.com/bsm/redislock v0.9.4
-	github.com/redis/go-redis/v9 v9.3.1
+	github.com/redis/go-redis/v9 v9.4.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/net v0.19.0
 )
