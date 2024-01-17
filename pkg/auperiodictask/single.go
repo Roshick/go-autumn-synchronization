@@ -3,6 +3,8 @@ package auperiodictask
 import (
 	"errors"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Roshick/go-autumn-synchronisation/pkg/aulocker"
@@ -15,6 +17,9 @@ type PeriodicSingleTaskRunner struct {
 	taskFunc    func(context.Context) error
 	coordinator Coordinator
 	config      Config
+
+	mu   sync.Mutex
+	done atomic.Value
 }
 
 type Config struct {
@@ -56,6 +61,22 @@ func CreateDefaultConfig() Config {
 	}
 }
 
+// Done copied from context.Context
+func (r *PeriodicSingleTaskRunner) Done() <-chan struct{} {
+	d := r.done.Load()
+	if d != nil {
+		return d.(chan struct{})
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	d = r.done.Load()
+	if d == nil {
+		d = make(chan struct{})
+		r.done.Store(d)
+	}
+	return d.(chan struct{})
+}
+
 func (r *PeriodicSingleTaskRunner) start(ctx context.Context) {
 	defer func() {
 		if err, ok := recover().(error); ok {
@@ -66,6 +87,7 @@ func (r *PeriodicSingleTaskRunner) start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			r.terminate()
 			return
 		case <-time.After(r.config.runnerFrequency):
 			r.performTask(ctx)
@@ -113,5 +135,16 @@ func (r *PeriodicSingleTaskRunner) performTask(
 	}(lock, ctx)
 	if err := callback(); err != nil {
 		aulogging.Logger.Ctx(ctx).Warn().WithErr(err).Printf("failed to perform periodic-task '%s'", r.taskKey)
+	}
+}
+
+func (r *PeriodicSingleTaskRunner) terminate() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	d, _ := r.done.Load().(chan struct{})
+	if d == nil {
+		r.done.Store(make(chan struct{}))
+	} else {
+		close(d)
 	}
 }
