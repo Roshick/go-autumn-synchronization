@@ -78,6 +78,7 @@ func (r *PeriodicSingleTaskRunner) Done() <-chan struct{} {
 }
 
 func (r *PeriodicSingleTaskRunner) start(ctx context.Context) {
+	defer r.terminate()
 	defer func() {
 		if err, ok := recover().(error); ok {
 			aulogging.Logger.Ctx(ctx).Error().WithErr(err).Printf("periodic-task runner '%s' exited due to panic: %+v", r.taskKey, errors.New(fmt.Sprintf("%v", err)))
@@ -87,7 +88,6 @@ func (r *PeriodicSingleTaskRunner) start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			r.terminate()
 			return
 		case <-time.After(r.config.runnerFrequency):
 			r.performTask(ctx)
