@@ -143,6 +143,8 @@ func (r *PeriodicSingleTaskRunner) terminate() {
 	defer r.mu.Unlock()
 	d, _ := r.done.Load().(chan struct{})
 	if d == nil {
+		d = make(chan struct{})
+		close(d)
 		r.done.Store(make(chan struct{}))
 	} else {
 		close(d)
