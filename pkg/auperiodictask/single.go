@@ -23,9 +23,9 @@ type PeriodicSingleTaskRunner struct {
 }
 
 type Config struct {
-	taskInterval    time.Duration
-	taskTimeout     time.Duration
-	runnerFrequency time.Duration
+	TaskInterval    time.Duration
+	TaskTimeout     time.Duration
+	RunnerFrequency time.Duration
 }
 
 func NewSingleTaskRunner(
@@ -55,9 +55,9 @@ func NewSingleTaskRunner(
 
 func CreateDefaultConfig() Config {
 	return Config{
-		taskInterval:    60 * time.Minute,
-		taskTimeout:     10 * time.Minute,
-		runnerFrequency: 10 * time.Second,
+		TaskInterval:    60 * time.Minute,
+		TaskTimeout:     10 * time.Minute,
+		RunnerFrequency: 10 * time.Second,
 	}
 }
 
@@ -89,7 +89,7 @@ func (r *PeriodicSingleTaskRunner) start(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(r.config.runnerFrequency):
+		case <-time.After(r.config.RunnerFrequency):
 			r.performTask(ctx)
 		}
 	}
@@ -103,7 +103,7 @@ func (r *PeriodicSingleTaskRunner) performTask(
 		if err != nil {
 			return err
 		}
-		if rTime != nil && time.Now().Sub(*rTime) < r.config.taskInterval {
+		if rTime != nil && time.Now().Sub(*rTime) < r.config.TaskInterval {
 			return nil
 		}
 
