@@ -29,7 +29,7 @@ func NewSingleTaskRunner(
 	taskFunc func(context.Context) error,
 	coordinator Coordinator,
 	config *Config,
-) PeriodicSingleTaskRunner {
+) *PeriodicSingleTaskRunner {
 	var vConfig Config
 	if config != nil {
 		vConfig = *config
@@ -37,7 +37,7 @@ func NewSingleTaskRunner(
 		vConfig = CreateDefaultConfig()
 	}
 
-	runner := PeriodicSingleTaskRunner{
+	runner := &PeriodicSingleTaskRunner{
 		taskKey:     taskKey,
 		taskFunc:    taskFunc,
 		coordinator: coordinator,
