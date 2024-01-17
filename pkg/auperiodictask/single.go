@@ -145,7 +145,7 @@ func (r *PeriodicSingleTaskRunner) terminate() {
 	if d == nil {
 		d = make(chan struct{})
 		close(d)
-		r.done.Store(make(chan struct{}))
+		r.done.Store(d)
 	} else {
 		close(d)
 	}
