@@ -7,7 +7,7 @@ type ErrRepositoryEntityNotFound struct {
 }
 
 func (e ErrRepositoryEntityNotFound) Error() string {
-	return fmt.Sprintf("repository does not contain an entity %s", e.name)
+	return fmt.Sprintf("repository does not contain an entity '%s'", e.name)
 }
 
 func NewErrRepositoryEntityNotFound(name string) ErrRepositoryEntityNotFound {
@@ -20,7 +20,7 @@ type ErrHashMismatch struct {
 }
 
 func (e ErrHashMismatch) Error() string {
-	return fmt.Sprintf("provided hash %s does not match current entity hash %s", e.providedHash, e.actualHash)
+	return fmt.Sprintf("provided hash '%s' does not match current entity hash '%s'", e.providedHash, e.actualHash)
 }
 
 func NewErrHashMismatch(
