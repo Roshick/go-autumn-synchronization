@@ -59,7 +59,7 @@ func CreateDefaultConfig() Config {
 func (r *PeriodicSingleTaskRunner) start(ctx context.Context) {
 	defer func() {
 		if err, ok := recover().(error); ok {
-			aulogging.Logger.Ctx(ctx).Error().WithErr(err).Printf("periodic-task runner %s exited due to panic: %+v", r.taskKey, errors.New(fmt.Sprintf("%v", err)))
+			aulogging.Logger.Ctx(ctx).Error().WithErr(err).Printf("periodic-task runner '%s' exited due to panic: %+v", r.taskKey, errors.New(fmt.Sprintf("%v", err)))
 		}
 	}()
 	r.performTask(ctx)
@@ -85,7 +85,7 @@ func (r *PeriodicSingleTaskRunner) performTask(
 			return nil
 		}
 
-		aulogging.Logger.Ctx(ctx).Info().Printf("periodic-task %s last-run time threshold exceeded, executing task", r.taskKey)
+		aulogging.Logger.Ctx(ctx).Info().Printf("periodic-task '%s' last-run time threshold exceeded, executing task", r.taskKey)
 		if err = r.taskFunc(ctx); err != nil {
 			return err
 		}
@@ -98,20 +98,20 @@ func (r *PeriodicSingleTaskRunner) performTask(
 
 	lock, err := r.coordinator.ObtainLock(ctx, r.taskKey)
 	if err != nil {
-		aulogging.Logger.Ctx(ctx).Warn().WithErr(err).Printf("failed to obtain lock for periodic-task %s due to error", r.taskKey)
+		aulogging.Logger.Ctx(ctx).Warn().WithErr(err).Printf("failed to obtain lock for periodic-task '%s'", r.taskKey)
 		return
 	}
 	if lock == nil {
-		aulogging.Logger.Ctx(ctx).Warn().Print("failed to obtain lock for periodic-task %s in time", r.taskKey)
+		aulogging.Logger.Ctx(ctx).Warn().Printf("failed to obtain lock for periodic-task '%s' in time", r.taskKey)
 		return
 	}
 	defer func(lock aulocker.Lock, ctx context.Context) {
 		err := lock.Release(ctx)
 		if err != nil {
-			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).Printf("failed to release lock for periodic-task %s", r.taskKey)
+			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).Printf("failed to release lock for periodic-task '%s'", r.taskKey)
 		}
 	}(lock, ctx)
 	if err := callback(); err != nil {
-		aulogging.Logger.Ctx(ctx).Warn().WithErr(err).Printf("failed to perform periodic-task %s", r.taskKey)
+		aulogging.Logger.Ctx(ctx).Warn().WithErr(err).Printf("failed to perform periodic-task '%s'", r.taskKey)
 	}
 }

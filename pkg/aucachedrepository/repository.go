@@ -74,8 +74,7 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Reconcile
 				processedEntity, err = c.processor.ProcessEntity(ctx, entity)
 				if err != nil {
 					aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
-						Printf("failed to post-process %s entity %s during full reconciliation, "+
-							"cache will be out of date until reconciliation", c.key, name)
+						Printf("failed to post-process %s entity '%s' during full reconciliation, cache will be out of date until reconciliation", c.key, name)
 					errs = append(errs, err)
 				}
 				errs = append(errs, c.performCacheAction(ctx, name, &processedEntity, CacheActionCauseReconciliation))
@@ -103,8 +102,7 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Reconcile
 		processedEntity, err = c.processor.ProcessEntity(ctx, entity)
 		if err != nil {
 			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
-				Printf("failed to post-process %s entity %s during reconciliation, "+
-					"cache will be out of date until reconciliation", c.key, name)
+				Printf("failed to post-process %s entity '%s' during reconciliation, cache will be out of date until reconciliation", c.key, name)
 			return err
 		}
 		return c.performCacheAction(ctx, name, &processedEntity, CacheActionCauseReconciliation)
@@ -126,15 +124,13 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Create(
 		processedEntity, err := c.processor.ProcessEntity(ctx, entity)
 		if err != nil {
 			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
-				Printf("failed to post-process %s entity %s after creation, "+
-					"cache will be out of date until reconciliation and hook cannot be performed", c.key, name)
+				Printf("failed to post-process %s entity '%s' after creation, cache will be out of date until reconciliation and hook cannot be performed", c.key, name)
 			return err
 		}
 		if c.hooks != nil {
 			if err = c.hooks.OnRepositoryEntityCreated(ctx, name, processedEntity); err != nil {
 				aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
-					Printf("failed to perform hook for %s entity %s after creation, "+
-						"cache will be out of date until reconciliation", c.key, name)
+					Printf("failed to perform hook for %s entity '%s' after creation, cache will be out of date until reconciliation", c.key, name)
 				return err
 			}
 		}
@@ -203,9 +199,9 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Update(
 		return err
 	}
 	if cachedEntity != nil {
-		cachedBaseEntity, err := c.processor.InverseProcessEntity(ctx, *cachedEntity)
-		if err != nil {
-			return err
+		cachedBaseEntity, innerErr := c.processor.InverseProcessEntity(ctx, *cachedEntity)
+		if innerErr != nil {
+			return innerErr
 		}
 		if defaultCompareEqual(entity, cachedBaseEntity) {
 			return nil
@@ -213,34 +209,32 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Update(
 	}
 
 	callback := func() error {
-		persistedEntity, err := c.repository.Read(ctx, name)
-		if err != nil {
-			return err
+		persistedEntity, innerErr := c.repository.Read(ctx, name)
+		if innerErr != nil {
+			return innerErr
 		}
-		currentHash, err := defaultHash(persistedEntity)
-		if err != nil {
-			return err
+		currentHash, innerErr := defaultHash(persistedEntity)
+		if innerErr != nil {
+			return innerErr
 		}
 		if currentHash != modifyIfMatchHash {
 			return NewErrHashMismatch(modifyIfMatchHash, currentHash)
 		}
 
-		if err = c.repository.Update(ctx, name, entity, changeContext); err != nil {
-			return err
+		if innerErr = c.repository.Update(ctx, name, entity, changeContext); innerErr != nil {
+			return innerErr
 		}
-		processedEntity, err := c.processor.ProcessEntity(ctx, entity)
-		if err != nil {
-			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
-				Printf("failed to post-process %s entity %s after update, "+
-					"cache will be out of date until reconciliation and hook cannot be performed", c.key, name)
-			return err
+		processedEntity, innerErr := c.processor.ProcessEntity(ctx, entity)
+		if innerErr != nil {
+			aulogging.Logger.Ctx(ctx).Warn().WithErr(innerErr).
+				Printf("failed to post-process %s entity '%s' after update, cache will be out of date until reconciliation and hook cannot be performed", c.key, name)
+			return innerErr
 		}
 		if c.hooks != nil {
-			if err = c.hooks.OnRepositoryEntityUpdated(ctx, name, processedEntity); err != nil {
-				aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
-					Printf("failed to perform hook for %s entity %s after update, "+
-						"cache will be out of date until reconciliation", c.key, name)
-				return err
+			if innerErr = c.hooks.OnRepositoryEntityUpdated(ctx, name, processedEntity); innerErr != nil {
+				aulogging.Logger.Ctx(ctx).Warn().WithErr(innerErr).
+					Printf("failed to perform hook for %s entity '%s' after update, cache will be out of date until reconciliation", c.key, name)
+				return innerErr
 			}
 		}
 		return c.performCacheAction(ctx, name, &processedEntity, CacheActionCauseRepositoryAction)
@@ -261,8 +255,7 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Delete(
 		if c.hooks != nil {
 			if err := c.hooks.OnRepositoryEntityDeleted(ctx, name); err != nil {
 				aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
-					Printf("failed to perform hook for %s entity %s after deletion, "+
-						"cache will be out of date until reconciliation", c.key, name)
+					Printf("failed to perform hook for %s entity '%s' after deletion, cache will be out of date until reconciliation", c.key, name)
 			}
 		}
 		return c.performCacheAction(ctx, name, nil, CacheActionCauseRepositoryAction)
@@ -286,15 +279,14 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) performCa
 	} else if entity == nil && cachedEntity != nil {
 		if err = c.cache.Remove(ctx, name); err != nil {
 			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
-				Printf("failed to remove %s entity %s from cache, "+
-					"cache will be out of date until reconciliation", c.key, name)
+				Printf("failed to remove %s entity '%s' from cache, cache will be out of date until reconciliation", c.key, name)
 			return err
 		}
-		aulogging.Logger.Ctx(ctx).Info().Printf("successfully removed %s entity %s from cache", c.key, name)
+		aulogging.Logger.Ctx(ctx).Info().Printf("successfully removed %s entity '%s' from cache", c.key, name)
 		if c.hooks != nil {
 			if err = c.hooks.OnCacheEntityRemoved(ctx, name, cause); err != nil {
 				aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
-					Printf("failed to perform cache hook for %s entity %s after removal", c.key, name)
+					Printf("failed to perform cache hook for %s entity '%s' after removal", c.key, name)
 				return err
 			}
 		}
@@ -303,11 +295,11 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) performCa
 			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
 				Printf("failed to cache %s entity %s", c.key, name)
 		}
-		aulogging.Logger.Ctx(ctx).Info().Printf("successfully added %s entity %s to cache", c.key, name)
+		aulogging.Logger.Ctx(ctx).Info().Printf("successfully added %s entity '%s' to cache", c.key, name)
 		if c.hooks != nil {
 			if err = c.hooks.OnCacheEntityAdded(ctx, name, *entity, cause); err != nil {
 				aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
-					Printf("failed to perform cache hook for %s entity %s after addition", c.key, name)
+					Printf("failed to perform cache hook for %s entity '%s' after addition", c.key, name)
 			}
 		}
 	} else if !defaultCompareEqual(*entity, *cachedEntity) {
@@ -315,11 +307,11 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) performCa
 			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
 				Printf("failed to update %s entity %s in cache", c.key, name)
 		}
-		aulogging.Logger.Ctx(ctx).Info().Printf("successfully updated %s entity %s in cache", c.key, name)
+		aulogging.Logger.Ctx(ctx).Info().Printf("successfully updated %s entity '%s' in cache", c.key, name)
 		if c.hooks != nil {
 			if err = c.hooks.OnCacheEntityUpdated(ctx, name, *entity, cause); err != nil {
 				aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
-					Printf("failed to perform cache hook for %s entity %s after update", c.key, name)
+					Printf("failed to perform cache hook for %s entity '%s' after update", c.key, name)
 			}
 		}
 	}
