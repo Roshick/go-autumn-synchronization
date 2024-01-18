@@ -30,7 +30,8 @@ func NewRedisLocker(
 	locker := redislock.New(rdb)
 
 	return &redisLocker{
-		locker: locker,
+		locker:        locker,
+		lockRetention: time.Second * 10,
 	}
 }
 
