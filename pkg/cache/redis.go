@@ -1,4 +1,4 @@
-package aucache
+package cache
 
 import (
 	"context"
@@ -57,7 +57,7 @@ func (c *redisCache[Entity]) Keys(
 	ctx context.Context,
 ) ([]string, error) {
 	keysWithPrefix, err := c.rdb.Keys(ctx, c.entryKeyPattern()).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil, nil
 	} else if err != nil {
 		return nil, err

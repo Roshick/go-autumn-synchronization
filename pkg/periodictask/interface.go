@@ -1,14 +1,14 @@
-package auperiodictask
+package periodictask
 
 import (
 	"time"
 
-	"github.com/Roshick/go-autumn-synchronisation/pkg/aulocker"
+	"github.com/Roshick/go-autumn-synchronisation/pkg/locker"
 	"golang.org/x/net/context"
 )
 
 type Coordinator interface {
-	aulocker.Locker
+	locker.Locker
 
 	LastRunTimestamp(
 		ctx context.Context,

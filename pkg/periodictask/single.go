@@ -1,4 +1,4 @@
-package auperiodictask
+package periodictask
 
 import (
 	"errors"
@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Roshick/go-autumn-synchronisation/pkg/aulocker"
 	aulogging "github.com/StephanHCB/go-autumn-logging"
 	"golang.org/x/net/context"
 )
@@ -118,23 +117,16 @@ func (r *PeriodicSingleTaskRunner) performTask(
 		return nil
 	}
 
-	lock, err := r.coordinator.ObtainLock(ctx, r.taskKey)
+	tCtx, cancel := context.WithTimeout(ctx, r.config.TaskTimeout)
+	defer cancel()
+	lCtx, _, err := r.coordinator.ObtainLock(tCtx, r.taskKey)
 	if err != nil {
-		aulogging.Logger.Ctx(ctx).Warn().WithErr(err).Printf("failed to obtain lock for periodic-task '%s'", r.taskKey)
+		aulogging.Logger.Ctx(lCtx).Warn().WithErr(err).Printf("failed to obtain lock for periodic-task '%s'", r.taskKey)
 		return
 	}
-	if lock == nil {
-		aulogging.Logger.Ctx(ctx).Warn().Printf("failed to obtain lock for periodic-task '%s' in time", r.taskKey)
-		return
-	}
-	defer func(lock aulocker.Lock, ctx context.Context) {
-		err := lock.Release(ctx)
-		if err != nil {
-			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).Printf("failed to release lock for periodic-task '%s'", r.taskKey)
-		}
-	}(lock, ctx)
-	if err := callback(); err != nil {
-		aulogging.Logger.Ctx(ctx).Warn().WithErr(err).Printf("failed to perform periodic-task '%s'", r.taskKey)
+
+	if err = callback(); err != nil {
+		aulogging.Logger.Ctx(lCtx).Warn().WithErr(err).Printf("failed to perform periodic-task '%s'", r.taskKey)
 	}
 }
 

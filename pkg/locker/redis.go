@@ -1,61 +1,38 @@
-package aulocker
+package locker
 
 import (
-	"errors"
-	"time"
-
-	"github.com/bsm/redislock"
-	"github.com/redis/go-redis/v9"
+	"github.com/redis/rueidis"
+	"github.com/redis/rueidis/rueidislock"
 	"golang.org/x/net/context"
 )
 
 type redisLocker struct {
-	locker        *redislock.Client
-	lockRetention time.Duration
-}
-
-type redisLock struct {
-	lock *redislock.Lock
+	locker rueidislock.Locker
 }
 
 func NewRedisLocker(
 	redisURL string,
 	redisPassword string,
-) Locker {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     redisURL,
-		Password: redisPassword,
-		DB:       0,
+) (Locker, error) {
+	locker, err := rueidislock.NewLocker(rueidislock.LockerOption{
+		ClientOption: rueidis.ClientOption{
+			InitAddress: []string{redisURL},
+			Password:    redisPassword},
+		KeyMajority: 2,
 	})
-	locker := redislock.New(rdb)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &redisLocker{
-		locker:        locker,
-		lockRetention: time.Second * 10,
-	}
+		locker: locker,
+	}, nil
 }
 
 func (l *redisLocker) ObtainLock(
 	ctx context.Context,
 	key string,
-) (Lock, error) {
-	lock, err := l.locker.Obtain(ctx, key, l.lockRetention, &redislock.Options{
-		RetryStrategy: redislock.LinearBackoff(10 * time.Second),
-	})
-	if err != nil {
-		if errors.Is(err, redislock.ErrNotObtained) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return &redisLock{
-		lock: lock,
-	}, nil
-}
-
-func (l *redisLock) Release(
-	ctx context.Context,
-) error {
-	return l.lock.Release(ctx)
+) (context.Context, context.CancelFunc, error) {
+	return l.locker.WithContext(ctx, key)
 }
