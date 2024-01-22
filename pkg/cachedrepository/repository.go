@@ -121,7 +121,12 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Create(
 		if err := c.repository.Create(cCtx, name, entity, changeContext); err != nil {
 			return err
 		}
-		processedEntity, err := c.processor.ProcessEntity(cCtx, entity)
+		// read persisted entity again in case of changes done during write operation
+		persistedEntity, err := c.repository.Read(ctx, name)
+		if err != nil {
+			return err
+		}
+		processedEntity, err := c.processor.ProcessEntity(cCtx, persistedEntity)
 		if err != nil {
 			aulogging.Logger.Ctx(cCtx).Warn().WithErr(err).
 				Printf("failed to post-process %s entity '%s' after creation, cache will be out of date until reconciliation and hook cannot be performed", c.key, name)
@@ -194,11 +199,9 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Update(
 	modifyIfMatchHash string,
 	changeContext *ChangeContext,
 ) error {
-	cachedEntity, err := c.cache.Get(ctx, name)
-	if err != nil {
+	if cachedEntity, err := c.cache.Get(ctx, name); err != nil {
 		return err
-	}
-	if cachedEntity != nil {
+	} else if cachedEntity != nil {
 		cachedBaseEntity, innerErr := c.processor.InverseProcessEntity(ctx, *cachedEntity)
 		if innerErr != nil {
 			return innerErr
@@ -224,7 +227,12 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Update(
 		if innerErr = c.repository.Update(cCtx, name, entity, changeContext); innerErr != nil {
 			return innerErr
 		}
-		processedEntity, innerErr := c.processor.ProcessEntity(cCtx, entity)
+		// read persisted entity again in case of changes done during write operation
+		persistedEntity, innerErr = c.repository.Read(ctx, name)
+		if innerErr != nil {
+			return innerErr
+		}
+		processedEntity, innerErr := c.processor.ProcessEntity(cCtx, persistedEntity)
 		if innerErr != nil {
 			aulogging.Logger.Ctx(cCtx).Warn().WithErr(innerErr).
 				Printf("failed to post-process %s entity '%s' after update, cache will be out of date until reconciliation and hook cannot be performed", c.key, name)
@@ -240,7 +248,16 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Update(
 		return c.performCacheAction(cCtx, name, &processedEntity, CacheActionCauseRepositoryAction)
 	}
 
-	return c.synchronised(ctx, callback)
+	if err := c.synchronised(ctx, callback); err != nil {
+		if errors.As(err, new(ErrHashMismatch)) {
+			if innerErr := c.Reconcile(ctx, name); innerErr != nil {
+				aulogging.Logger.Ctx(ctx).Warn().WithErr(innerErr).
+					Printf("failed to reconcile %s entity '%s' after hash mismatch, cache will be out of date until reconciliation", c.key, name)
+			}
+		}
+		return err
+	}
+	return nil
 }
 
 func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Delete(
