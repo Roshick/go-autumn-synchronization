@@ -1,4 +1,4 @@
-package aucachedrepository
+package cachedrepository
 
 import "fmt"
 
