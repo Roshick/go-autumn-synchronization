@@ -3,7 +3,6 @@ package cache
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/redis/rueidis"
 	"strings"
@@ -59,7 +58,7 @@ func (c *rueidisCache[Entity]) Keys(
 ) ([]string, error) {
 	result := c.client.Do(ctx, c.client.B().Keys().Pattern(c.entryKeyPattern()).Build())
 	if err := result.Error(); err != nil {
-		if errors.Is(err, new(rueidis.RedisError)) && err.(*rueidis.RedisError).IsNil() {
+		if rueidis.IsRedisNil(err) {
 			return nil, nil
 		} else if err != nil {
 			return nil, err
@@ -117,7 +116,7 @@ func (c *rueidisCache[Entity]) Get(
 ) (*Entity, error) {
 	result := c.client.Do(ctx, c.client.B().Get().Key(c.entryKey(key)).Build())
 	if err := result.Error(); err != nil {
-		if errors.Is(err, new(rueidis.RedisError)) && err.(*rueidis.RedisError).IsNil() {
+		if rueidis.IsRedisNil(err) {
 			return nil, nil
 		} else if err != nil {
 			return nil, err
