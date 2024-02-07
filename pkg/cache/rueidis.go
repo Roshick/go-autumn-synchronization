@@ -59,7 +59,11 @@ func (c *rueidisCache[Entity]) Keys(
 ) ([]string, error) {
 	result := c.client.Do(ctx, c.client.B().Keys().Pattern(c.entryKeyPattern()).Build())
 	if err := result.Error(); err != nil {
-		return nil, err
+		if errors.Is(err, new(rueidis.RedisError)) && err.(*rueidis.RedisError).IsNil() {
+			return nil, nil
+		} else if err != nil {
+			return nil, err
+		}
 	}
 
 	keysWithPrefix, err := result.AsStrSlice()
