@@ -6,6 +6,8 @@ import (
 	"math"
 	"sync"
 	"time"
+
+	aulogging "github.com/StephanHCB/go-autumn-logging"
 )
 
 type memoryCache[Entity any] struct {
@@ -17,8 +19,9 @@ func NewMemoryCache[Entity any]() Cache[Entity] {
 }
 
 func (c *memoryCache[Entity]) Entries(
-	_ context.Context,
+	ctx context.Context,
 ) (map[string]Entity, error) {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching all entries from cache")
 	entries := make(map[string]Entity)
 	var firstError error
 	c.store.Range(func(key, value any) bool {
@@ -34,8 +37,9 @@ func (c *memoryCache[Entity]) Entries(
 }
 
 func (c *memoryCache[Entity]) Keys(
-	_ context.Context,
+	ctx context.Context,
 ) ([]string, error) {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching all keys from cache")
 	keys := make([]string, 0)
 	c.store.Range(func(key, value any) bool {
 		keys = append(keys, key.(string))
@@ -45,8 +49,9 @@ func (c *memoryCache[Entity]) Keys(
 }
 
 func (c *memoryCache[Entity]) Values(
-	_ context.Context,
+	ctx context.Context,
 ) ([]Entity, error) {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching all values from cache")
 	values := make([]Entity, 0)
 	var firstError error
 	c.store.Range(func(key, value any) bool {
@@ -62,11 +67,12 @@ func (c *memoryCache[Entity]) Values(
 }
 
 func (c *memoryCache[Entity]) Set(
-	_ context.Context,
+	ctx context.Context,
 	key string,
 	value Entity,
 	_ time.Duration,
 ) error {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("setting value of '%s' in cache", key)
 	jsonBytes, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -76,9 +82,10 @@ func (c *memoryCache[Entity]) Set(
 }
 
 func (c *memoryCache[Entity]) Get(
-	_ context.Context,
+	ctx context.Context,
 	key string,
 ) (*Entity, error) {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching value of '%s' from cache", key)
 	jsonString, ok := c.store.Load(key)
 	if !ok {
 		return nil, nil
@@ -87,9 +94,10 @@ func (c *memoryCache[Entity]) Get(
 }
 
 func (c *memoryCache[Entity]) Remove(
-	_ context.Context,
+	ctx context.Context,
 	key string,
 ) error {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("removing value of '%s' from cache", key)
 	c.store.Delete(key)
 	return nil
 }

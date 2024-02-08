@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	aulogging "github.com/StephanHCB/go-autumn-logging"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -36,6 +37,7 @@ func NewRedisCache[Entity any](
 func (c *redisCache[Entity]) Entries(
 	ctx context.Context,
 ) (map[string]Entity, error) {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching all entries from cache '%s'", c.key)
 	keys, err := c.Keys(ctx)
 	if err != nil {
 		return nil, err
@@ -56,6 +58,7 @@ func (c *redisCache[Entity]) Entries(
 func (c *redisCache[Entity]) Keys(
 	ctx context.Context,
 ) ([]string, error) {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching all keys from cache '%s'", c.key)
 	keysWithPrefix, err := c.rdb.Keys(ctx, c.entryKeyPattern()).Result()
 	if errors.Is(err, redis.Nil) {
 		return nil, nil
@@ -73,6 +76,7 @@ func (c *redisCache[Entity]) Keys(
 func (c *redisCache[Entity]) Values(
 	ctx context.Context,
 ) ([]Entity, error) {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching all values from cache '%s'", c.key)
 	entries, err := c.Entries(ctx)
 	if err != nil {
 		return nil, err
@@ -90,6 +94,7 @@ func (c *redisCache[Entity]) Set(
 	value Entity,
 	retention time.Duration,
 ) error {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("setting value of '%s' in cache '%s'", key, c.key)
 	jsonBytes, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -102,6 +107,7 @@ func (c *redisCache[Entity]) Get(
 	ctx context.Context,
 	key string,
 ) (*Entity, error) {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching value of '%s' from cache '%s'", key, c.key)
 	jsonString, err := c.rdb.Get(ctx, c.entryKey(key)).Result()
 	if errors.Is(err, redis.Nil) {
 		return nil, nil
@@ -120,6 +126,7 @@ func (c *redisCache[Entity]) Remove(
 	ctx context.Context,
 	key string,
 ) error {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("removing value of '%s' from cache '%s'", key, c.key)
 	return c.rdb.Del(ctx, c.entryKey(key)).Err()
 }
 

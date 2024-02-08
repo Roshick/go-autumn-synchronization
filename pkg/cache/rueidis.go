@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	aulogging "github.com/StephanHCB/go-autumn-logging"
-	"github.com/redis/rueidis"
 	"strings"
 	"time"
+
+	aulogging "github.com/StephanHCB/go-autumn-logging"
+	"github.com/redis/rueidis"
 )
 
 type rueidisCache[Entity any] struct {
@@ -37,7 +38,7 @@ func NewRueidisCache[Entity any](
 func (c *rueidisCache[Entity]) Entries(
 	ctx context.Context,
 ) (map[string]Entity, error) {
-	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching all entries in cache %s", c.key)
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching all entries from cache '%s'", c.key)
 	keys, err := c.Keys(ctx)
 	if err != nil {
 		return nil, err
@@ -58,7 +59,7 @@ func (c *rueidisCache[Entity]) Entries(
 func (c *rueidisCache[Entity]) Keys(
 	ctx context.Context,
 ) ([]string, error) {
-	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching all keys in cache %s", c.key)
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching all keys from cache '%s'", c.key)
 	result := c.client.Do(ctx, c.client.B().Keys().Pattern(c.entryKeyPattern()).Build())
 	if err := result.Error(); err != nil {
 		if rueidis.IsRedisNil(err) {
@@ -83,7 +84,7 @@ func (c *rueidisCache[Entity]) Keys(
 func (c *rueidisCache[Entity]) Values(
 	ctx context.Context,
 ) ([]Entity, error) {
-	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching all values in cache %s", c.key)
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching all values from cache '%s'", c.key)
 	entries, err := c.Entries(ctx)
 	if err != nil {
 		return nil, err
@@ -101,7 +102,7 @@ func (c *rueidisCache[Entity]) Set(
 	value Entity,
 	retention time.Duration,
 ) error {
-	aulogging.Logger.Ctx(ctx).Debug().Printf("setting value of %s in cache %s", key, c.key)
+	aulogging.Logger.Ctx(ctx).Debug().Printf("setting value of '%s' in cache '%s'", key, c.key)
 	jsonBytes, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -119,7 +120,7 @@ func (c *rueidisCache[Entity]) Get(
 	ctx context.Context,
 	key string,
 ) (*Entity, error) {
-	aulogging.Logger.Ctx(ctx).Debug().Printf("getting value of %s in cache %s", key, c.key)
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching value of '%s' from cache '%s'", key, c.key)
 	result := c.client.Do(ctx, c.client.B().Get().Key(c.entryKey(key)).Build())
 	if err := result.Error(); err != nil {
 		if rueidis.IsRedisNil(err) {
@@ -145,7 +146,7 @@ func (c *rueidisCache[Entity]) Remove(
 	ctx context.Context,
 	key string,
 ) error {
-	aulogging.Logger.Ctx(ctx).Debug().Printf("removing value of %s in cache %s", key, c.key)
+	aulogging.Logger.Ctx(ctx).Debug().Printf("removing value of '%s' from cache '%s'", key, c.key)
 	return c.client.Do(ctx, c.client.B().Del().Key(c.entryKey(key)).Build()).Error()
 }
 
@@ -153,6 +154,7 @@ func (c *rueidisCache[Entity]) RemainingRetention(
 	ctx context.Context,
 	key string,
 ) (time.Duration, error) {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching remaining retention of '%s' cache '%s'", key, c.key)
 	result := c.client.Do(ctx, c.client.B().Ttl().Key(c.entryKey(key)).Build())
 	if err := result.Error(); err != nil {
 		return 0, err
