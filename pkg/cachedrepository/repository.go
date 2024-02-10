@@ -32,6 +32,9 @@ func NewCachedRepository[BaseEntity any, ProcessedEntity any, ChangeContext any]
 	locker locker.Locker,
 	hooks Hooks[ProcessedEntity],
 ) *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext] {
+	if reflect.ValueOf(locker).IsNil() {
+		locker = nil
+	}
 	if reflect.ValueOf(hooks).IsNil() {
 		hooks = nil
 	}
@@ -49,41 +52,27 @@ func NewCachedRepository[BaseEntity any, ProcessedEntity any, ChangeContext any]
 func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) ReconcileAll(
 	ctx context.Context,
 ) error {
-	callback := func(cCtx context.Context) error {
-		entities, err := c.repository.ReadAll(cCtx)
-		if err != nil {
-			return err
-		}
-		cachedEntities, err := c.cache.Entries(cCtx)
-		if err != nil {
-			return err
-		}
-		names := make(map[string]bool)
-		for name := range entities {
-			names[name] = true
-		}
-		for name := range cachedEntities {
-			names[name] = true
-		}
-		errs := make([]error, 0)
-		for name := range names {
-			if entity, ok := entities[name]; !ok {
-				errs = append(errs, c.performCacheAction(cCtx, name, nil, CacheActionCauseReconciliation))
-			} else {
-				var processedEntity ProcessedEntity
-				processedEntity, err = c.processor.ProcessEntity(cCtx, entity)
-				if err != nil {
-					aulogging.Logger.Ctx(cCtx).Warn().WithErr(err).
-						Printf("failed to post-process %s entity '%s' during full reconciliation, cache will be out of date until reconciliation", c.key, name)
-					errs = append(errs, err)
-				}
-				errs = append(errs, c.performCacheAction(cCtx, name, &processedEntity, CacheActionCauseReconciliation))
-			}
-		}
-		return errors.Join(errs...)
+	entities, err := c.repository.ReadAll(ctx)
+	if err != nil {
+		return err
+	}
+	cachedEntities, err := c.cache.Entries(ctx)
+	if err != nil {
+		return err
+	}
+	names := make(map[string]bool)
+	for name := range entities {
+		names[name] = true
+	}
+	for name := range cachedEntities {
+		names[name] = true
 	}
 
-	return c.synchronised(ctx, callback)
+	errs := make([]error, 0)
+	for name := range names {
+		errs = append(errs, c.Reconcile(ctx, name))
+	}
+	return errors.Join(errs...)
 }
 
 func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Reconcile(
@@ -108,7 +97,7 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Reconcile
 		return c.performCacheAction(cCtx, name, &processedEntity, CacheActionCauseReconciliation)
 	}
 
-	return c.synchronised(ctx, callback)
+	return c.synchronised(ctx, callback, name)
 }
 
 func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Create(
@@ -142,7 +131,7 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Create(
 		return c.performCacheAction(cCtx, name, &processedEntity, CacheActionCauseRepositoryAction)
 	}
 
-	return c.synchronised(ctx, callback)
+	return c.synchronised(ctx, callback, name)
 }
 
 func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) ReadAll(
@@ -248,7 +237,7 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Update(
 		return c.performCacheAction(cCtx, name, &processedEntity, CacheActionCauseRepositoryAction)
 	}
 
-	if err := c.synchronised(ctx, callback); err != nil {
+	if err := c.synchronised(ctx, callback, name); err != nil {
 		if errors.As(err, new(ErrHashMismatch)) {
 			if innerErr := c.Reconcile(ctx, name); innerErr != nil {
 				aulogging.Logger.Ctx(ctx).Warn().WithErr(innerErr).
@@ -278,7 +267,7 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Delete(
 		return c.performCacheAction(cCtx, name, nil, CacheActionCauseRepositoryAction)
 	}
 
-	return c.synchronised(ctx, callback)
+	return c.synchronised(ctx, callback, name)
 }
 
 func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) performCacheAction(
@@ -338,12 +327,13 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) performCa
 func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) synchronised(
 	ctx context.Context,
 	callback func(context.Context) error,
+	key string,
 ) error {
 	if c.locker == nil {
 		return callback(ctx)
 	}
 
-	lCtx, cancel, err := c.locker.ObtainLock(ctx, c.lockerKey())
+	lCtx, cancel, err := c.locker.ObtainLock(ctx, c.lockerKey(key))
 	if err != nil {
 		return err
 	}
@@ -352,8 +342,8 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) synchroni
 	return callback(lCtx)
 }
 
-func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) lockerKey() string {
-	return fmt.Sprintf("%s-locker", c.key)
+func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) lockerKey(key string) string {
+	return fmt.Sprintf("%s-%s-locker", c.key, key)
 }
 
 func defaultCompareEqual(

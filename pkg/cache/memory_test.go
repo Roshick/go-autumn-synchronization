@@ -1,10 +1,11 @@
 package cache
 
 import (
-	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
 )
 
 type demoEntity struct {

@@ -1,8 +1,9 @@
 package locker
 
 import (
-	"golang.org/x/net/context"
 	"sync"
+
+	"golang.org/x/net/context"
 )
 
 type memoryLocker struct {
