@@ -82,7 +82,7 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Reconcile
 	callback := func(cCtx context.Context) error {
 		entity, err := c.repository.Read(cCtx, name)
 		if err != nil {
-			if errors.Is(err, &ErrRepositoryEntityNotFound{}) {
+			if errors.As(err, &ErrRepositoryEntityNotFound{}) {
 				return c.performCacheAction(cCtx, name, nil, CacheActionCauseReconciliation)
 			}
 			return err
