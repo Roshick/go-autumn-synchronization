@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/StephanHCB/go-autumn-logging v0.3.0
 	github.com/redis/go-redis/v9 v9.5.1
-	github.com/redis/rueidis v1.0.32
+	github.com/redis/rueidis v1.0.33
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/net v0.22.0
 )
