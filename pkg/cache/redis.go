@@ -137,6 +137,10 @@ func (c *redisCache[Entity]) RemainingRetention(
 	return c.rdb.TTL(ctx, c.entryKey(key)).Result()
 }
 
+func (c *redisCache[Entity]) Flush(ctx context.Context) error {
+	return c.rdb.FlushDB(ctx).Err()
+}
+
 func (c *redisCache[Entity]) entryKeyPrefix() string {
 	return fmt.Sprintf("%s|", c.key)
 }

@@ -113,6 +113,11 @@ func (c *memoryCache[Entity]) RemainingRetention(
 	return math.MaxInt64, nil
 }
 
+func (c *memoryCache[Entity]) Flush(_ context.Context) error {
+	c.store = sync.Map{}
+	return nil
+}
+
 func unmarshal[Entity any](jsonString string) (*Entity, error) {
 	var value Entity
 	if err := json.Unmarshal([]byte(jsonString), &value); err != nil {

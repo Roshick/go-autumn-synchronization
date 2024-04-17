@@ -40,4 +40,8 @@ type Cache[Entity any] interface {
 		ctx context.Context,
 		key string,
 	) (time.Duration, error)
+
+	Flush(
+		ctx context.Context,
+	) error
 }

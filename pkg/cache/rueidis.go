@@ -167,6 +167,11 @@ func (c *rueidisCache[Entity]) RemainingRetention(
 	return time.Millisecond * time.Duration(ttlInMillis), nil
 }
 
+func (c *rueidisCache[Entity]) Flush(ctx context.Context) error {
+	result := c.client.Do(ctx, c.client.B().Flushdb().Build())
+	return result.Error()
+}
+
 func (c *rueidisCache[Entity]) entryKeyPrefix() string {
 	return fmt.Sprintf("%s|", c.key)
 }
