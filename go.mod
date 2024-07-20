@@ -3,7 +3,7 @@ module github.com/Roshick/go-autumn-synchronisation
 go 1.21
 
 require (
-	github.com/StephanHCB/go-autumn-logging v0.3.0
+	github.com/StephanHCB/go-autumn-logging v0.4.0
 	github.com/redis/go-redis/v9 v9.6.0
 	github.com/redis/rueidis v1.0.41
 	github.com/stretchr/testify v1.9.0
