@@ -32,6 +32,8 @@ github.com/redis/go-redis/v9 v9.5.3 h1:fOAp1/uJG+ZtcITgZOfYFmTKPE7n4Vclj1wZFgRci
 github.com/redis/go-redis/v9 v9.5.3/go.mod h1:hdY0cQFCN4fnSYT6TkisLufl/4W5UIXyv0b/CLO2V2M=
 github.com/redis/go-redis/v9 v9.6.0 h1:NLck+Rab3AOTHw21CGRpvQpgTrAU4sgdCswqGtlhGRA=
 github.com/redis/go-redis/v9 v9.6.0/go.mod h1:hdY0cQFCN4fnSYT6TkisLufl/4W5UIXyv0b/CLO2V2M=
+github.com/redis/go-redis/v9 v9.6.1 h1:HHDteefn6ZkTtY5fGUE8tj8uy85AHk6zP7CpzIAM0y4=
+github.com/redis/go-redis/v9 v9.6.1/go.mod h1:0C0c6ycQsdpVNQpxb1njEQIqkx5UcsM8FJCQLgE9+RA=
 github.com/redis/rueidis v1.0.27 h1:UhTlj+9JBuQe6SHe60YJA+0TonZDi5n/TkJZ7QTyV/s=
 github.com/redis/rueidis v1.0.27/go.mod h1:NT7lPuiVYijdZVsV0V8i9ZUhqe1OMGaq+NiQigNuKlg=
 github.com/redis/rueidis v1.0.28 h1:Txig8OB9lGlAuFL5F7msvt3WE2iH/KRK9ZTCcNXHhdc=
