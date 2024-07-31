@@ -3,35 +3,36 @@ package cache
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	aulogging "github.com/StephanHCB/go-autumn-logging"
-	"github.com/redis/go-redis/v9"
+	"github.com/redis/rueidis"
 )
 
 type redisCache[Entity any] struct {
-	rdb *redis.Client
-	key string
+	client rueidis.Client
+	key    string
 }
 
 func NewRedisCache[Entity any](
 	redisURL string,
 	redisPassword string,
 	key string,
-) Cache[Entity] {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     redisURL,
-		Password: redisPassword,
-		DB:       0,
+) (Cache[Entity], error) {
+	client, err := rueidis.NewClient(rueidis.ClientOption{
+		InitAddress: []string{redisURL},
+		Password:    redisPassword,
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return &redisCache[Entity]{
-		rdb: rdb,
-		key: key,
-	}
+		client: client,
+		key:    key,
+	}, nil
 }
 
 func (c *redisCache[Entity]) Entries(
@@ -44,9 +45,9 @@ func (c *redisCache[Entity]) Entries(
 	}
 	entries := make(map[string]Entity)
 	for _, key := range keys {
-		value, err := c.Get(ctx, key)
-		if err != nil {
-			return nil, err
+		value, innerErr := c.Get(ctx, key)
+		if innerErr != nil {
+			return nil, innerErr
 		}
 		if value != nil {
 			entries[key] = *value
@@ -59,10 +60,17 @@ func (c *redisCache[Entity]) Keys(
 	ctx context.Context,
 ) ([]string, error) {
 	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching all keys from cache '%s'", c.key)
-	keysWithPrefix, err := c.rdb.Keys(ctx, c.entryKeyPattern()).Result()
-	if errors.Is(err, redis.Nil) {
-		return nil, nil
-	} else if err != nil {
+	result := c.client.Do(ctx, c.client.B().Keys().Pattern(c.entryKeyPattern()).Build())
+	if err := result.Error(); err != nil {
+		if rueidis.IsRedisNil(err) {
+			return nil, nil
+		} else if err != nil {
+			return nil, err
+		}
+	}
+
+	keysWithPrefix, err := result.AsStrSlice()
+	if err != nil {
 		return nil, err
 	}
 
@@ -100,7 +108,12 @@ func (c *redisCache[Entity]) Set(
 		return err
 	}
 
-	return c.rdb.Set(ctx, c.entryKey(key), string(jsonBytes), retention).Err()
+	cmd := c.client.B().Set().Key(c.entryKey(key)).Value(string(jsonBytes))
+	if retention > 0 {
+		cmd.Ex(retention)
+	}
+
+	return c.client.Do(ctx, cmd.Build()).Error()
 }
 
 func (c *redisCache[Entity]) Get(
@@ -108,15 +121,22 @@ func (c *redisCache[Entity]) Get(
 	key string,
 ) (*Entity, error) {
 	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching value of '%s' from cache '%s'", key, c.key)
-	jsonString, err := c.rdb.Get(ctx, c.entryKey(key)).Result()
-	if errors.Is(err, redis.Nil) {
-		return nil, nil
-	} else if err != nil {
+	result := c.client.Do(ctx, c.client.B().Get().Key(c.entryKey(key)).Build())
+	if err := result.Error(); err != nil {
+		if rueidis.IsRedisNil(err) {
+			return nil, nil
+		} else if err != nil {
+			return nil, err
+		}
+	}
+
+	jsonString, err := result.ToString()
+	if err != nil {
 		return nil, err
 	}
 
 	var value Entity
-	if err = json.Unmarshal([]byte(jsonString), &value); err != nil {
+	if err := json.Unmarshal([]byte(jsonString), &value); err != nil {
 		return nil, err
 	}
 	return &value, nil
@@ -127,14 +147,24 @@ func (c *redisCache[Entity]) Remove(
 	key string,
 ) error {
 	aulogging.Logger.Ctx(ctx).Debug().Printf("removing value of '%s' from cache '%s'", key, c.key)
-	return c.rdb.Del(ctx, c.entryKey(key)).Err()
+	return c.client.Do(ctx, c.client.B().Del().Key(c.entryKey(key)).Build()).Error()
 }
 
 func (c *redisCache[Entity]) RemainingRetention(
 	ctx context.Context,
 	key string,
 ) (time.Duration, error) {
-	return c.rdb.TTL(ctx, c.entryKey(key)).Result()
+	aulogging.Logger.Ctx(ctx).Debug().Printf("fetching remaining retention of '%s' cache '%s'", key, c.key)
+	result := c.client.Do(ctx, c.client.B().Ttl().Key(c.entryKey(key)).Build())
+	if err := result.Error(); err != nil {
+		return 0, err
+	}
+
+	ttlInMillis, err := result.AsInt64()
+	if err != nil {
+		return 0, err
+	}
+	return time.Millisecond * time.Duration(ttlInMillis), nil
 }
 
 func (c *redisCache[Entity]) entryKeyPrefix() string {
