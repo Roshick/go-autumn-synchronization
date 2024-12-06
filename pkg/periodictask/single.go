@@ -3,6 +3,7 @@ package periodictask
 import (
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -80,7 +81,10 @@ func (r *PeriodicSingleTaskRunner) start(ctx context.Context) {
 	defer r.terminate()
 	defer func() {
 		if err, ok := recover().(error); ok {
-			aulogging.Logger.Ctx(ctx).Error().WithErr(err).Printf("periodic-task runner '%s' exited due to panic: %+v", r.taskKey, errors.New(fmt.Sprintf("%v", err)))
+			aulogging.Logger.Ctx(ctx).Error().
+				WithErr(err).
+				With(StackTraceLogField, string(debug.Stack())).
+				Printf("periodic-task runner '%s' exited due to panic: %+v", r.taskKey, errors.New(fmt.Sprintf("%v", err)))
 		}
 	}()
 	r.performTask(ctx)

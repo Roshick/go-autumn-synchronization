@@ -7,6 +7,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+var StackTraceLogField = "stack-trace"
+
 type Coordinator interface {
 	locker.Locker
 
