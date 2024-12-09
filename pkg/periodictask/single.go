@@ -125,7 +125,7 @@ func (r *PeriodicSingleTaskRunner) performTask(
 	defer cancel()
 	lCtx, _, err := r.coordinator.ObtainLock(tCtx, r.taskKey)
 	if err != nil {
-		aulogging.Logger.Ctx(lCtx).Warn().WithErr(err).Printf("failed to obtain lock for periodic-task '%s'", r.taskKey)
+		aulogging.Logger.Ctx(tCtx).Warn().WithErr(err).Printf("failed to obtain lock for periodic-task '%s'", r.taskKey)
 		return
 	}
 
