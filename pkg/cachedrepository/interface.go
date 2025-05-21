@@ -35,11 +35,11 @@ type Repository[Entity any, ChangeContext any] interface {
 	) error
 }
 
-type CacheActionCause int64
+type CacheActionCause string
 
 const (
-	CacheActionCauseRepositoryAction CacheActionCause = iota
-	CacheActionCauseReconciliation
+	CacheActionCauseRepositoryAction CacheActionCause = "repository-action"
+	CacheActionCauseReconciliation                    = "reconciliation"
 )
 
 type Hooks[Entity any] interface {

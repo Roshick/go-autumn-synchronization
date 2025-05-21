@@ -80,9 +80,13 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) Reconcile
 	name string,
 ) error {
 	callback := func(cCtx context.Context) error {
+		aulogging.Logger.Ctx(cCtx).Debug().Printf("reconciling %s entity %s", c.key, name)
+
 		entity, err := c.repository.Read(cCtx, name)
 		if err != nil {
 			if errors.As(err, &ErrRepositoryEntityNotFound{}) {
+				aulogging.Logger.Ctx(cCtx).Debug().Printf("%s entity %s has been removed from the repository and will be removed from the cache", c.key, name)
+
 				return c.performCacheAction(cCtx, name, nil, CacheActionCauseReconciliation)
 			}
 			return err
@@ -276,13 +280,19 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) performCa
 	entity *ProcessedEntity,
 	cause CacheActionCause,
 ) error {
+	aulogging.Logger.Ctx(ctx).Debug().Printf("performing cache action caused by %s for %s entity %s", cause, c.key, name)
+
 	cachedEntity, err := c.cache.Get(ctx, name)
 	if err != nil {
 		return err
 	}
 	if entity == nil && cachedEntity == nil {
+		aulogging.Logger.Ctx(ctx).Debug().Printf("%s entity %s was removed from repository and is not part of cache, nothing to do", c.key, name)
+
 		return nil
 	} else if entity == nil && cachedEntity != nil {
+		aulogging.Logger.Ctx(ctx).Debug().Printf("%s entity %s was removed from repository and is part of cache, removing from cache", c.key, name)
+
 		if err = c.cache.Remove(ctx, name); err != nil {
 			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
 				Printf("failed to remove %s entity '%s' from cache, cache will be out of date until reconciliation", c.key, name)
@@ -297,6 +307,8 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) performCa
 			}
 		}
 	} else if entity != nil && cachedEntity == nil {
+		aulogging.Logger.Ctx(ctx).Debug().Printf("%s entity %s is part of repository but currently not in cache, adding to cache", c.key, name)
+
 		if err = c.cache.Set(ctx, name, *entity, 0); err != nil {
 			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
 				Printf("failed to cache %s entity %s", c.key, name)
@@ -309,6 +321,8 @@ func (c *CachedRepository[BaseEntity, ProcessedEntity, ChangeContext]) performCa
 			}
 		}
 	} else if !defaultCompareEqual(*entity, *cachedEntity) {
+		aulogging.Logger.Ctx(ctx).Debug().Printf("%s entity %s is part of repository and part of cache but was changed, modifying in cache", c.key, name)
+
 		if err = c.cache.Set(ctx, name, *entity, 0); err != nil {
 			aulogging.Logger.Ctx(ctx).Warn().WithErr(err).
 				Printf("failed to update %s entity %s in cache", c.key, name)
