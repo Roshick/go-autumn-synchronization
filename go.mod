@@ -2,7 +2,7 @@ module github.com/Roshick/go-autumn-synchronisation
 
 go 1.24.9
 
-toolchain go1.25.7
+toolchain go1.26.0
 
 require (
 	github.com/StephanHCB/go-autumn-logging v0.4.0
