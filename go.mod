@@ -1,6 +1,6 @@
 module github.com/Roshick/go-autumn-synchronisation
 
-go 1.24.9
+go 1.25.0
 
 toolchain go1.25.7
 
@@ -8,7 +8,7 @@ require (
 	github.com/StephanHCB/go-autumn-logging v0.4.0
 	github.com/redis/rueidis v1.0.71
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.51.0
 )
 
 require (
