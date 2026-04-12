@@ -6,7 +6,7 @@ toolchain go1.26.1
 
 require (
 	github.com/StephanHCB/go-autumn-logging v0.4.0
-	github.com/redis/rueidis v1.0.73
+	github.com/redis/rueidis v1.0.74
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/net v0.52.0
 )
