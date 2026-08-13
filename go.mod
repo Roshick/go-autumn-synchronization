@@ -8,7 +8,7 @@ require (
 	github.com/StephanHCB/go-autumn-logging v0.4.0
 	github.com/redis/rueidis v1.0.76
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/net v0.57.0
+	golang.org/x/net v0.58.0
 )
 
 require (
